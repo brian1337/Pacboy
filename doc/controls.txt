@@ -1,0 +1,10 @@
+﻿WASD - Movement
+
+Q - Left Dash
+E - Right Dash
+
+Space – Jump (you can also wall jump)
+Hold Shift - Sprint
+
+3 - Swap to Rifle
+5 - Swap to RocketLauncher
