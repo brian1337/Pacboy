@@ -35,8 +35,6 @@ ACharacterBase::ACharacterBase(const FObjectInitializer& ObjectInitializer)
 	this->DashEnergy = 10.f;
 	this->WallJumpEnergy = 15.f;
 
-	this->Fallen = true;
-
 	this->EnergyRegen = 0.66f;
 
 	this->MaxWallJumps = -1;
@@ -106,7 +104,6 @@ void ACharacterBase::GetLifetimeReplicatedProps(TArray< class FLifetimeProperty 
 	DOREPLIFETIME(ACharacterBase, DelayShot);
 	DOREPLIFETIME(ACharacterBase, ShootingGateOpen);
 	DOREPLIFETIME(ACharacterBase, FireFromClient);
-	DOREPLIFETIME(ACharacterBase, Fallen);
 }
 
 void ACharacterBase::SwapToRifle()
@@ -794,20 +791,40 @@ void ACharacterBase::Respawn_Player_Server_Implementation()
 	}
 }
 
-bool ACharacterBase::Despawn_Body_Validate()
+void ACharacterBase::Despawn_Actor_Implementation()
 {
-	return true;
+	this->Destroy();
 }
 
-void ACharacterBase::Despawn_Body_Implementation()
+void ACharacterBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	this->Rifle->Destroy();
-	this->RocketLauncher->Destroy();
-	this->Destroy();
+	if (this->Rifle != NULL)
+	{
+		this->Rifle->Destroy();
+	}
+
+	if (this->RocketLauncher != NULL)
+	{
+		this->RocketLauncher->Destroy();
+	}
 }
 
 void ACharacterBase::FellOutOfWorld(const class UDamageType& dmgType)
 {
+	if (Role < ROLE_Authority)
+	{
+		this->FellOutOfWorld_Server(&dmgType);
+		return;
+	}
+
+	this->GetWorldTimerManager().PauseTimer(this, &ACharacterBase::UpdateEnergy);
+
+	this->bIsDead = true;
+	this->Health = 0;
+	this->Energy = 0;
+
+	this->FellOutOfWorld_StopEnergy();
+
 	AMainPlayerController* ThisController = Cast<AMainPlayerController>(this->GetController());
 
 	if (ThisController != NULL)
@@ -815,22 +832,35 @@ void ACharacterBase::FellOutOfWorld(const class UDamageType& dmgType)
 		ThisController->Deaths++;
 	}
 
-	this->bIsDead = true;
-
-	this->FellOutOfWorld_Server();
+	this->Destroy_Body();
 
 	this->GetWorldTimerManager().PauseTimer(this, &ACharacterBase::OnFire);
 
 	this->GetWorldTimerManager().SetTimer(this, &ACharacterBase::Respawn_Player_Client, 5.f, false);
-	this->GetWorldTimerManager().SetTimer(this, &ACharacterBase::Despawn_Body, 15.f, false);
+	this->GetWorldTimerManager().SetTimer(this, &ACharacterBase::Despawn_Actor, 15.f, false);
 }
 
-void ACharacterBase::FellOutOfWorld_Server_Implementation()
+bool ACharacterBase::FellOutOfWorld_Server_Validate(const class UDamageType* dmgType)
+{
+	return true;
+}
+
+void ACharacterBase::FellOutOfWorld_Server_Implementation(const class UDamageType* dmgType)
+{
+	this->FellOutOfWorld(*dmgType);
+}
+
+void ACharacterBase::FellOutOfWorld_StopEnergy_Implementation()
+{
+	this->GetWorldTimerManager().PauseTimer(this, &ACharacterBase::UpdateEnergy);
+}
+
+void ACharacterBase::Destroy_Body_Implementation()
 {
 	this->Rifle->Destroy();
 	this->RocketLauncher->Destroy();
-	this->CapsuleComponent->DestroyComponent();
-	this->Mesh->DestroyComponent();
+	this->GetCapsuleComponent()->DestroyComponent();
+	this->GetMesh()->DestroyComponent();
 }
 
 bool ACharacterBase::UseEnergy(float EnergyValue)
@@ -847,7 +877,7 @@ bool ACharacterBase::UseEnergy(float EnergyValue)
 
 void ACharacterBase::UpdateEnergy()
 {
-	if (this->bIsSprinting && !this->bIsAiming)
+	if (this->bIsSprinting && !this->bIsAiming && this->GetVelocity() != FVector(0, 0, 0))
 	{
 		this->Energy = FMath::Max(this->Energy - 1.f, 0.f);
 	}
@@ -887,10 +917,13 @@ void ACharacterBase::TakeDamage(float Damage, const FHitResult& Hit, AController
 		this->bIsReloading = false;
 		this->bIsDead = true;
 
+		this->GetWorldTimerManager().PauseTimer(this, &ACharacterBase::UpdateEnergy);
+
+		this->Energy = 0;
+
 		AMainPlayerController* ThisController = Cast<AMainPlayerController>(this->GetController());
 		if (ThisController != NULL)
 		{
-			this->Fallen = false;
 			ThisController->Deaths++;
 		}
 
@@ -905,8 +938,9 @@ void ACharacterBase::TakeDamage(float Damage, const FHitResult& Hit, AController
 			this->GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		}
 
+		this->GetWorldTimerManager().SetTimer(this, &ACharacterBase::Destroy_Body, 1.f, false);
 		this->GetWorldTimerManager().SetTimer(this, &ACharacterBase::Respawn_Player_Client, 5.f, false);
-		this->GetWorldTimerManager().SetTimer(this, &ACharacterBase::Despawn_Body, 15.f, false);
+		this->GetWorldTimerManager().SetTimer(this, &ACharacterBase::Despawn_Actor, 15.f, false);
 
 		//this->GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
@@ -939,6 +973,7 @@ void ACharacterBase::TakeDamage_Client_Implementation()
 	this->bUseControllerRotationYaw = false;
 	this->GetCharacterMovement()->bOrientRotationToMovement = false;
 	this->GetWorldTimerManager().PauseTimer(this, &ACharacterBase::OnFire);
+	this->GetWorldTimerManager().PauseTimer(this, &ACharacterBase::UpdateEnergy);
 }
 
 void ACharacterBase::ReceiveAnyDamage(float Damage, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser)

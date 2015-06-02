@@ -81,10 +81,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement")
 	float EnergyRegen;
 
-	/** True upon death if character has fallen off the map */
-	UPROPERTY(Replicated)
-	bool Fallen;
-
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Character Movement")
 	int32 JumpCount;
 
@@ -184,7 +180,7 @@ public:
 	virtual void Jump() override;
 
 	UFUNCTION(Server, WithValidation, Reliable)
-		virtual void Jump_Server();
+	virtual void Jump_Server();
 
 	struct DetectWallResult
 	{
@@ -281,13 +277,21 @@ public:
 	UFUNCTION(Server, WithValidation, Reliable)
 	virtual void Respawn_Player_Server();
 
-	UFUNCTION(NetMulticast, WithValidation, Reliable)
-	virtual void Despawn_Body();
+	UFUNCTION(NetMulticast, Reliable)
+	virtual void Despawn_Actor();
+
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	virtual void FellOutOfWorld(const class UDamageType& dmgType) override;
 
+	UFUNCTION(Server, WithValidation, Reliable)
+	virtual void FellOutOfWorld_Server(const class UDamageType* dmgType);
+
+	UFUNCTION(Client, Reliable)
+	virtual void FellOutOfWorld_StopEnergy();
+
 	UFUNCTION(NetMulticast, Reliable)
-	virtual void FellOutOfWorld_Server();
+	virtual void Destroy_Body();
 
 	virtual void SwapToRifle();
 

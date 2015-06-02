@@ -11,9 +11,7 @@
 UCLASS()
 class PACBOY_API APacboyGameMode : public AGameMode
 {
+
 	GENERATED_BODY()
-	
-	
-	
-	
+
 };
