@@ -1,6 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "Pacboy.h"
+#include‰‡ "Pacboy.h"
 #include "CharacterBase.h"
 
 #include "UnrealNetwork.h"
@@ -104,10 +104,15 @@ void ACharacterBase::GetLifetimeReplicatedProps(TArray< class FLifetimeProperty 
 	DOREPLIFETIME(ACharacterBase, DelayShot);
 	DOREPLIFETIME(ACharacterBase, ShootingGateOpen);
 	DOREPLIFETIME(ACharacterBase, FireFromClient);
+	DOREPLIFETIME(ACharacterBase, bReloadClient);
 }
 
 void ACharacterBase::SwapToRifle()
 {
+	this->bIsReloading = false;
+	this->StopAnimMontage(this->ReloadAnim);
+	this->RestartReloadAnimTimeRemaining();
+
 	if (Role < ROLE_Authority)
 	{
 		this->SwapToRifle_Server();
@@ -115,6 +120,11 @@ void ACharacterBase::SwapToRifle()
 	else
 	{
 		this->SwapToRifle_Multicast();
+
+		if (this->Rifle->AmmoInClip <= 0.f && this->Rifle->RemainingAmmo > 0.f)
+		{
+			this->ReloadStart();
+		}
 	}
 }
 
@@ -125,7 +135,7 @@ bool ACharacterBase::SwapToRifle_Server_Validate()
 
 void ACharacterBase::SwapToRifle_Server_Implementation()
 {
-	this->SwapToRifle_Multicast();
+	this->SwapToRifle();
 }
 
 bool ACharacterBase::SwapToRifle_Multicast_Validate()
@@ -135,6 +145,8 @@ bool ACharacterBase::SwapToRifle_Multicast_Validate()
 
 void ACharacterBase::SwapToRifle_Multicast_Implementation()
 {
+	this->StopAnimMontage(this->ReloadAnim);
+
 	this->EquippedWeapon->SetActorHiddenInGame(true);
 	this->EquippedWeapon = this->Rifle;
 	this->EquippedWeapon->SetActorHiddenInGame(false);
@@ -143,6 +155,10 @@ void ACharacterBase::SwapToRifle_Multicast_Implementation()
 
 void ACharacterBase::SwapToRocketLauncher()
 {
+	this->bIsReloading = false;
+	this->StopAnimMontage(this->ReloadAnim);
+	this->RestartReloadAnimTimeRemaining();
+
 	if (Role < ROLE_Authority)
 	{
 		this->SwapToRocketLauncher_Server();
@@ -150,6 +166,11 @@ void ACharacterBase::SwapToRocketLauncher()
 	else
 	{
 		this->SwapToRocketLauncher_Multicast();
+
+		if (this->RocketLauncher->AmmoInClip <= 0.f && this->RocketLauncher->RemainingAmmo > 0.f)
+		{
+			this->ReloadStart();
+		}
 	}
 }
 
@@ -160,7 +181,7 @@ bool ACharacterBase::SwapToRocketLauncher_Server_Validate()
 
 void ACharacterBase::SwapToRocketLauncher_Server_Implementation()
 {
-	this->SwapToRocketLauncher_Multicast();
+	this->SwapToRocketLauncher();
 }
 
 bool ACharacterBase::SwapToRocketLauncher_Multicast_Validate()
@@ -170,6 +191,8 @@ bool ACharacterBase::SwapToRocketLauncher_Multicast_Validate()
 
 void ACharacterBase::SwapToRocketLauncher_Multicast_Implementation()
 {
+	this->StopAnimMontage(this->ReloadAnim);
+
 	this->EquippedWeapon->SetActorHiddenInGame(true);
 	this->EquippedWeapon = this->RocketLauncher;
 	this->EquippedWeapon->SetActorHiddenInGame(false);
@@ -637,6 +660,12 @@ void ACharacterBase::OnFire_Client_Implementation()
 	this->EquippedWeapon->AmmoInClip--;
 }
 
+void ACharacterBase::Reload_Client_Implementation()
+{
+	this->ReloadStart();
+	this->bReloadClient = false;
+}
+
 void ACharacterBase::ReloadStart()
 {
 	if (this->bIsDead)
@@ -733,16 +762,18 @@ void ACharacterBase::ReloadStop_Server_Implementation()
 
 void ACharacterBase::Reload()
 {
+	this->Reload_OnClient();
+}
+
+void ACharacterBase::Reload_OnClient_Implementation()
+{
 	if (this->EquippedWeapon != NULL)
 	{
 		this->EquippedWeapon->Reload();
 		this->ReloadStop();
 	}
 
-	if (Role < ROLE_Authority)
-	{
-		this->Reload_Server();
-	}
+	this->Reload_Server();
 }
 
 bool ACharacterBase::Reload_Server_Validate()
@@ -752,7 +783,11 @@ bool ACharacterBase::Reload_Server_Validate()
 
 void ACharacterBase::Reload_Server_Implementation()
 {
-	this->Reload();
+	if (this->EquippedWeapon != NULL)
+	{
+		this->EquippedWeapon->Reload();
+		this->ReloadStop();
+	}
 }
 
 void ACharacterBase::Respawn_Player_Client_Implementation()

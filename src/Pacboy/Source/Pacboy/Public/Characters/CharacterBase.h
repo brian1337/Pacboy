@@ -9,8 +9,8 @@
 #include "CharacterBase.generated.h"
 
 /**
- *
- */
+*
+*/
 UCLASS()
 class PACBOY_API ACharacterBase : public ACharacter, public IDamageableObject
 {
@@ -63,6 +63,9 @@ public:
 	/** Indicates if the character is dead */
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Character")
 	bool bIsDead;
+
+	UPROPERTY(Replicated)
+	bool bReloadClient;
 
 	/** Character dash force */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement")
@@ -137,7 +140,6 @@ public:
 	/** Used for aim offset */
 	UPROPERTY(Replicated)
 	float CharPitch;
-
 
 	UFUNCTION(Server, WithValidation, Reliable)
 	void SetCharPitch_Server();
@@ -254,6 +256,9 @@ public:
 	UFUNCTION(Client, Reliable)
 	virtual void OnFire_Client();
 
+	UFUNCTION(Client, Reliable)
+	virtual void Reload_Client();
+
 	virtual void ReloadStart();
 
 	UFUNCTION(Server, WithValidation, Reliable)
@@ -270,6 +275,9 @@ public:
 
 	UFUNCTION(Server, WithValidation, Reliable)
 	virtual void Reload_Server();
+
+	UFUNCTION(Client, Reliable)
+	virtual void Reload_OnClient();
 
 	UFUNCTION(Client, Reliable)
 	virtual void Respawn_Player_Client();
@@ -315,7 +323,7 @@ public:
 	void UpdateEnergy();
 
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
-	FRotator GetAimOffsets() const;
+		FRotator GetAimOffsets() const;
 
 protected:
 

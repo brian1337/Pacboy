@@ -12,6 +12,12 @@ UCLASS()
 class PACBOY_API APacboyGameMode : public AGameMode
 {
 
+public:
+
+	virtual void ChangeName(AController* Other, const FString& S, bool bNameChange) override;
+
+private:
+
 	GENERATED_BODY()
 
 };

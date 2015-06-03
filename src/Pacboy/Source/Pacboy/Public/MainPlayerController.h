@@ -2,11 +2,12 @@
 
 #pragma once
 
+#include <string>
 #include "GameFramework/PlayerController.h"
 #include "MainPlayerController.generated.h"
 
 /**
- * 
+ *
  */
 UCLASS()
 class PACBOY_API AMainPlayerController : public APlayerController

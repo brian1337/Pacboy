@@ -8,3 +8,5 @@ Hold Shift - Sprint
 
 3 - Swap to Rifle
 5 - Swap to RocketLauncher
+
+Open console with tilda button and type in "SetName name" to change your name

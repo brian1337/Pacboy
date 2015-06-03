@@ -1,2 +1,2 @@
-﻿[High Settings Build](https://my.pcloud.com/publink/show?code=XZVm3XZN7IT7B06EPybAP83Cteu64hFPYak)  
-[Low Settings Build](https://my.pcloud.com/publink/show?code=XZJm3XZVmNLSSk7OUYo71SrrhOJbY22Mmdy)  
+﻿[High Settings Build](https://my.pcloud.com/publink/show?code=XZxFGXZJbGsh66Afj4C1EN2RcBEvmf1nuky)  
+[Medium Settings Build](https://my.pcloud.com/publink/show?code=XZkpGXZRY2DC0OpBekpyjKY5CAzORbUgCD7)  

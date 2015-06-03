@@ -152,9 +152,21 @@ void AMainCharacter::OnFire()
 
 			this->EquippedWeapon->AmmoInClip--;
 
+			if (this->EquippedWeapon->AmmoInClip <= 0.f && this->EquippedWeapon->RemainingAmmo > 0.f)
+			{
+				this->ReloadStart();
+				this->bReloadClient = true;
+			}
+
 			if (Role >= ROLE_Authority && this->FireFromClient)
 			{
 				this->OnFire_Client();
+
+				if (bReloadClient)
+				{
+					this->Reload_Client();
+					this->bReloadClient = false;
+				}
 			}
 		}
 	}
